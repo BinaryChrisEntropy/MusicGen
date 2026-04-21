@@ -5,12 +5,13 @@ import styles from './page.module.css';
 import { Play, Pause, Trash2, Download, Music, Wand2, Activity } from 'lucide-react';
 
 // --- Types ---
-type Sample = {
+export type Sample = {
   id: string;
   prompt: string;
   genre: string;
   emotion: string;
   duration: number;
+  audioUrl?: string; // URL for the blobl
   createdAt: Date;
 };
 
@@ -45,41 +46,93 @@ export default function MusicGen() {
   const [samples, setSamples] = useState<Sample[]>(MOCK_SAMPLES);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [visualizerType, setVisualizerType] = useState<'waveform' | 'frequency'>('waveform');
+  const [duration, setDuration] = useState(30); // Add duration control
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
     
-    // Simulate generation delay
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:8000/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          genre,
+          emotion,
+          duration,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Generation failed: ${response.statusText}`);
+      }
+
+      // Convert WAV response to a Blob URL
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+
       const newSample: Sample = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 9),
         prompt,
         genre,
         emotion,
-        duration: Math.floor(Math.random() * 120) + 60,
+        duration,
+        audioUrl,
         createdAt: new Date()
       };
+      
       setSamples([newSample, ...samples]);
-      setIsGenerating(false);
       setPrompt("");
-    }, 3000);
+    } catch (error) {
+      console.error("Error generating track:", error);
+      alert("Failed to generate track. Make sure the backend is running on port 8000.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDelete = (id: string) => {
-    setSamples(samples.filter(s => s.id !== id));
-    if (playingId === id) setPlayingId(null);
+    const sample = samples.find((s: Sample) => s.id === id);
+    if (sample && sample.audioUrl) {
+      URL.revokeObjectURL(sample.audioUrl);
+    }
+    
+    setSamples(samples.filter((s: Sample) => s.id !== id));
+    if (playingId === id) {
+      setPlayingId(null);
+      if (audioRef.current) audioRef.current.pause();
+    }
   };
 
   const togglePlay = (id: string) => {
     if (playingId === id) {
       setPlayingId(null);
+      if (audioRef.current) audioRef.current.pause();
     } else {
       setPlayingId(id);
     }
   };
 
-  const currentSample = samples.find(s => s.id === playingId);
+  // Play audio whenever playingId changes
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    if (playingId) {
+      const sample = samples.find((s: Sample) => s.id === playingId);
+      if (sample && sample.audioUrl) {
+        audioRef.current.src = sample.audioUrl;
+        audioRef.current.play().catch((e: Error) => console.error("Playback failed:", e));
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  }, [playingId, samples]);
+
+  const currentSample = samples.find((s: Sample) => s.id === playingId);
 
   return (
     <div className={styles.container}>
@@ -111,7 +164,7 @@ export default function MusicGen() {
           <div className={styles.formGroup}>
             <label className={styles.label}>Genre</label>
             <div className={styles.chipGrid}>
-              {GENRES.map(g => (
+              {GENRES.map((g: string) => (
                 <div 
                   key={g} 
                   className={`${styles.chip} ${genre === g ? styles.active : ''}`}
@@ -126,7 +179,7 @@ export default function MusicGen() {
           <div className={styles.formGroup}>
             <label className={styles.label}>Emotion</label>
             <div className={styles.chipGrid}>
-              {EMOTIONS.map(e => (
+              {EMOTIONS.map((e: string) => (
                 <div 
                   key={e} 
                   className={`${styles.emotionChip} ${emotion === e ? styles.active : ''}`}
@@ -136,6 +189,19 @@ export default function MusicGen() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Duration: {duration}s</label>
+            <input 
+              type="range" 
+              min="10" 
+              max="90" 
+              step="10"
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
+            />
           </div>
 
           <button 
@@ -164,7 +230,7 @@ export default function MusicGen() {
             </div>
           ) : (
             <div className={styles.sampleList}>
-              {samples.map((sample, idx) => (
+              {samples.map((sample: Sample, idx: number) => (
                 <div key={sample.id} className={`${styles.sampleItem} anim-slide-up`} style={{ animationDelay: `${idx * 0.1}s` }}>
                   <div className={styles.sampleInfo}>
                     <button className={styles.playBtn} onClick={() => togglePlay(sample.id)}>
@@ -214,8 +280,17 @@ export default function MusicGen() {
           <Waveform isPlaying={!!playingId} type={visualizerType} />
         </div>
 
+        {/* Hidden Audio Element */}
+        <audio 
+          ref={audioRef} 
+          onEnded={() => setPlayingId(null)}
+          style={{ display: 'none' }} 
+        />
+
         <div style={{ width: '250px', textAlign: 'right' }}>
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>MOCKED AUDIO</span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+            {currentSample?.audioUrl ? "GENERATED AUDIO" : "MOCKED AUDIO"}
+          </span>
         </div>
       </div>
 
@@ -242,10 +317,10 @@ function Waveform({ isPlaying, type }: { isPlaying: boolean, type: 'waveform' | 
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying) {
       interval = setInterval(() => {
-        setBars(prevBars => prevBars.map(b => {
+        setBars(prevBars => prevBars.map((b: number) => {
           // gently randomize around current value
           let newVal = b + (Math.random() * 20 - 10);
           if (newVal > 100) newVal = 100;
@@ -259,7 +334,7 @@ function Waveform({ isPlaying, type }: { isPlaying: boolean, type: 'waveform' | 
 
   return (
     <div className={`${styles.waveform} ${type === 'frequency' ? styles.frequency : ''}`}>
-      {bars.map((bar, i) => (
+      {bars.map((bar: number, i: number) => (
         <div 
           key={i} 
           className={styles.waveBar} 
