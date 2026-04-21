@@ -201,8 +201,12 @@ def generate_audio(
 
 
 def audio_to_wav_bytes(audio: np.ndarray, sr: int) -> bytes:
+    # Convert float32 [-1, 1] to int16 PCM for browser compatibility
+    audio = np.clip(audio, -1, 1)
+    audio_int16 = (audio * 32767).astype(np.int16)
+    
     buf = io.BytesIO()
-    scipy.io.wavfile.write(buf, rate=sr, data=audio)
+    scipy.io.wavfile.write(buf, rate=sr, data=audio_int16)
     buf.seek(0)
     return buf.read()
 
