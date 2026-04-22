@@ -7,6 +7,7 @@ import { Play, Pause, Trash2, Download, Music, Wand2, Activity } from 'lucide-re
 // --- Types ---
 export type Sample = {
   id: string;
+  title: string; // New field
   prompt: string;
   genre: string;
   emotion: string;
@@ -18,10 +19,18 @@ export type Sample = {
 const GENRES = ["Ambient", "Synthwave", "Lo-Fi", "Cinematic", "Electronic", "Jazz", "Cyberpunk", "Classical", "Metal", "Rock", "Techno", "HipHop"];
 const EMOTIONS = ["Chill", "Energetic", "Melancholic", "Happy", "Dark", "Ethereal", "Aggressive", "Uplifting"];
 
+const TITLE_SUGGESTIONS = [
+  "Midnight Neon", "Echoes of Time", "Digital Sunset", "Cosmic Voyage", 
+  "Lost in Orbit", "Electric Dreams", "Velvet Clouds", "Binary Heart",
+  "Cyber Serenade", "Crystal Waves", "Glitch Harmony", "Neon Rain",
+  "Solar Pulse", "Infinite Horizon", "Synthetic Soul", "Starlight Bridge"
+];
+
 // --- Mock Data ---
 const MOCK_SAMPLES: Sample[] = [
   {
     id: "1",
+    title: "Neon Horizon",
     prompt: "A rainy night in neo-tokyo with neon lights flickering",
     genre: "Cyberpunk",
     emotion: "Dark",
@@ -30,6 +39,7 @@ const MOCK_SAMPLES: Sample[] = [
   },
   {
     id: "2",
+    title: "Cozy Hearth",
     prompt: "Sitting by the fireplace drinking hot cocoa",
     genre: "Lo-Fi",
     emotion: "Chill",
@@ -39,6 +49,7 @@ const MOCK_SAMPLES: Sample[] = [
 ];
 
 export default function MusicGen() {
+  const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [genre, setGenre] = useState("Synthwave");
   const [emotion, setEmotion] = useState("Energetic");
@@ -48,6 +59,12 @@ export default function MusicGen() {
   const [visualizerType, setVisualizerType] = useState<'waveform' | 'frequency'>('waveform');
   const [duration, setDuration] = useState(30); // Add duration control
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize random title suggestion
+  useEffect(() => {
+    const randomTitle = TITLE_SUGGESTIONS[Math.floor(Math.random() * TITLE_SUGGESTIONS.length)];
+    setTitle(randomTitle);
+  }, []);
   
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -77,6 +94,7 @@ export default function MusicGen() {
 
       const newSample: Sample = {
         id: Math.random().toString(36).substring(2, 9),
+        title: title || "Untitled Track",
         prompt,
         genre,
         emotion,
@@ -87,6 +105,9 @@ export default function MusicGen() {
       
       setSamples([newSample, ...samples]);
       setPrompt("");
+      // Set a new random title for the next generation
+      const nextTitle = TITLE_SUGGESTIONS[Math.floor(Math.random() * TITLE_SUGGESTIONS.length)];
+      setTitle(nextTitle);
     } catch (error) {
       console.error("Error generating track:", error);
       alert("Failed to generate track. Make sure the backend is running on port 8000.");
@@ -151,6 +172,28 @@ export default function MusicGen() {
         <section className={`glass-panel ${styles.glassCard}`}>
           <h2 className={styles.sectionTitle}><Wand2 size={20} /> Creation Forge</h2>
           
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Track Title</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input 
+                type="text"
+                className={styles.textarea}
+                style={{ minHeight: 'auto', padding: '0.75rem 1rem' }}
+                placeholder="Enter a name for your track..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <button 
+                className={styles.actionBtn} 
+                style={{ background: 'rgba(255,255,255,0.05)', height: '42px', width: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => setTitle(TITLE_SUGGESTIONS[Math.floor(Math.random() * TITLE_SUGGESTIONS.length)])}
+                title="Random Title"
+              >
+                <Activity size={18} />
+              </button>
+            </div>
+          </div>
+
           <div className={styles.formGroup}>
             <label className={styles.label}>Prompt</label>
             <textarea 
@@ -237,7 +280,7 @@ export default function MusicGen() {
                       {playingId === sample.id ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" style={{ marginLeft: "3px" }} />}
                     </button>
                     <div className={styles.sampleText}>
-                      <span className={styles.sampleTitle}>{sample.prompt.length > 40 ? sample.prompt.substring(0, 40) + '...' : sample.prompt}</span>
+                      <span className={styles.sampleTitle}>{sample.title}</span>
                       <div className={styles.sampleTags}>
                         <span>{sample.genre}</span> • <span>{sample.emotion}</span> • <span>{Math.floor(sample.duration / 60)}:{(sample.duration % 60).toString().padStart(2, '0')}</span>
                       </div>
@@ -259,8 +302,8 @@ export default function MusicGen() {
         <div className={styles.playerInfo}>
           {currentSample && (
             <div className={styles.sampleText}>
-              <span className={styles.sampleTitle} style={{ fontSize: '0.9rem' }}>{currentSample.prompt.substring(0, 20)}...</span>
-              <span className={styles.sampleTags} style={{ marginTop: '2px' }}>{currentSample.genre}</span>
+              <span className={styles.sampleTitle} style={{ fontSize: '0.9rem' }}>{currentSample.title}</span>
+              <span className={styles.sampleTags} style={{ marginTop: '2px' }}>{currentSample.genre} • {currentSample.emotion}</span>
             </div>
           )}
         </div>
