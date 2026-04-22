@@ -235,7 +235,8 @@ async def generate(req: GenerateRequest):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded yet")
 
-    full_prompt = f"{req.genre} track with {req.emotion} mood. {req.prompt}"
+    # Optimized prompt engineering for MusicGen
+    full_prompt = f"{req.genre} music, {req.emotion} mood, {req.prompt}. High quality, studio recording, professional sound."
     logger.info(f"Generating: prompt='{full_prompt}', duration={req.duration}s")
 
     try:
