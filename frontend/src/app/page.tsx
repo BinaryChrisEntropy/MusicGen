@@ -65,13 +65,13 @@ export default function MusicGen() {
     const randomTitle = TITLE_SUGGESTIONS[Math.floor(Math.random() * TITLE_SUGGESTIONS.length)];
     setTitle(randomTitle);
   }, []);
-  
+
   const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
-    
+
     try {
-      const response = await fetch('http://localhost:8000/generate', {
+      const response = await fetch('http://192.168.178.44:8000/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export default function MusicGen() {
         audioUrl,
         createdAt: new Date()
       };
-      
+
       setSamples([newSample, ...samples]);
       setPrompt("");
       // Set a new random title for the next generation
@@ -121,7 +121,7 @@ export default function MusicGen() {
     if (sample && sample.audioUrl) {
       URL.revokeObjectURL(sample.audioUrl);
     }
-    
+
     setSamples(samples.filter((s: Sample) => s.id !== id));
     if (playingId === id) {
       setPlayingId(null);
@@ -141,7 +141,7 @@ export default function MusicGen() {
   // Play audio whenever playingId changes
   useEffect(() => {
     if (!audioRef.current) return;
-    
+
     if (playingId) {
       const sample = samples.find((s: Sample) => s.id === playingId);
       if (sample && sample.audioUrl) {
@@ -171,7 +171,7 @@ export default function MusicGen() {
         {/* Left Column: Controls */}
         <section className={`glass-panel ${styles.glassCard}`}>
           <h2 className={styles.sectionTitle}><Wand2 size={20} /> Creation Forge</h2>
-          
+
           <div className={styles.formGroup}>
             <label className={styles.label}>Track Title</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -196,7 +196,7 @@ export default function MusicGen() {
 
           <div className={styles.formGroup}>
             <label className={styles.label}>Prompt</label>
-            <textarea 
+            <textarea
               className={styles.textarea}
               placeholder="Describe the sound, instruments, or the scene you want to hear..."
               value={prompt}
@@ -208,8 +208,8 @@ export default function MusicGen() {
             <label className={styles.label}>Genre</label>
             <div className={styles.chipGrid}>
               {GENRES.map((g: string) => (
-                <div 
-                  key={g} 
+                <div
+                  key={g}
                   className={`${styles.chip} ${genre === g ? styles.active : ''}`}
                   onClick={() => setGenre(g)}
                 >
@@ -223,8 +223,8 @@ export default function MusicGen() {
             <label className={styles.label}>Emotion</label>
             <div className={styles.chipGrid}>
               {EMOTIONS.map((e: string) => (
-                <div 
-                  key={e} 
+                <div
+                  key={e}
                   className={`${styles.emotionChip} ${emotion === e ? styles.active : ''}`}
                   onClick={() => setEmotion(e)}
                 >
@@ -236,10 +236,10 @@ export default function MusicGen() {
 
           <div className={styles.formGroup}>
             <label className={styles.label}>Duration: {duration}s</label>
-            <input 
-              type="range" 
-              min="10" 
-              max="90" 
+            <input
+              type="range"
+              min="10"
+              max="90"
               step="10"
               value={duration}
               onChange={(e) => setDuration(parseInt(e.target.value))}
@@ -247,8 +247,8 @@ export default function MusicGen() {
             />
           </div>
 
-          <button 
-            className={styles.generateBtn} 
+          <button
+            className={styles.generateBtn}
             disabled={!prompt || isGenerating}
             onClick={handleGenerate}
           >
@@ -265,7 +265,7 @@ export default function MusicGen() {
         {/* Right Column: Library */}
         <section className={`glass-panel ${styles.glassCard}`}>
           <h2 className={styles.sectionTitle}><Activity size={20} /> Library</h2>
-          
+
           {samples.length === 0 ? (
             <div className={styles.emptyState}>
               <Music size={48} />
@@ -307,14 +307,14 @@ export default function MusicGen() {
             </div>
           )}
         </div>
-        
+
         <div className={styles.playerControls}>
           <div className={styles.controlsMain}>
             <button className={styles.mainPlayBtn} onClick={() => currentSample && togglePlay(currentSample.id)}>
               {playingId ? <Pause size={24} fill="black" /> : <Play size={24} fill="black" style={{ marginLeft: "4px" }} />}
             </button>
-            <button 
-              className={styles.viewToggleBtn} 
+            <button
+              className={styles.viewToggleBtn}
               onClick={() => setVisualizerType(prev => prev === 'waveform' ? 'frequency' : 'waveform')}
             >
               Mode: {visualizerType === 'waveform' ? 'Wave' : 'Freq'}
@@ -324,10 +324,10 @@ export default function MusicGen() {
         </div>
 
         {/* Hidden Audio Element */}
-        <audio 
-          ref={audioRef} 
+        <audio
+          ref={audioRef}
           onEnded={() => setPlayingId(null)}
-          style={{ display: 'none' }} 
+          style={{ display: 'none' }}
         />
 
         <div style={{ width: '250px', textAlign: 'right' }}>
@@ -341,7 +341,7 @@ export default function MusicGen() {
         <p>
           Released under the MIT License. Developed with the assistance of AI.<br />
           <span style={{ opacity: 0.8 }}>Note: All audio tracks are generated dynamically via AI models.</span><br /><br />
-          Typography: <a href="https://fonts.google.com/specimen/Outfit" target="_blank" rel="noreferrer">Outfit</a> & <a href="https://fonts.google.com/specimen/Inter" target="_blank" rel="noreferrer">Inter</a> via Google Fonts. 
+          Typography: <a href="https://fonts.google.com/specimen/Outfit" target="_blank" rel="noreferrer">Outfit</a> & <a href="https://fonts.google.com/specimen/Inter" target="_blank" rel="noreferrer">Inter</a> via Google Fonts.
           Icons provided by <a href="https://lucide.dev" target="_blank" rel="noreferrer">Lucide React</a>.
         </p>
       </footer>
@@ -352,7 +352,7 @@ export default function MusicGen() {
 // Minimal Waveform Visualizer
 function Waveform({ isPlaying, type }: { isPlaying: boolean, type: 'waveform' | 'frequency' }) {
   const [bars, setBars] = useState<number[]>([]);
-  
+
   useEffect(() => {
     // Generate 40 static bars first
     const newBars = Array.from({ length: 50 }, () => Math.random() * 60 + 10);
@@ -378,13 +378,13 @@ function Waveform({ isPlaying, type }: { isPlaying: boolean, type: 'waveform' | 
   return (
     <div className={`${styles.waveform} ${type === 'frequency' ? styles.frequency : ''}`}>
       {bars.map((bar: number, i: number) => (
-        <div 
-          key={i} 
-          className={styles.waveBar} 
-          style={{ 
+        <div
+          key={i}
+          className={styles.waveBar}
+          style={{
             height: isPlaying ? `${bar}%` : '4px',
             backgroundColor: isPlaying ? 'var(--accent-secondary)' : 'rgba(255, 255, 255, 0.2)'
-          }} 
+          }}
         />
       ))}
     </div>
